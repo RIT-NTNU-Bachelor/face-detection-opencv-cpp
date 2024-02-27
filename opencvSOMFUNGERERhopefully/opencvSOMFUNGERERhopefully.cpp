@@ -6,12 +6,9 @@
 #include<string>
 
 using namespace std;
-namespace fs = std::filesystem;
 using namespace cv;
 
 int main(int argc, char** argv) {
-    cout << "Current path is " << fs::current_path() << '\n';
-    
     Mat video_stream; // Matrix to hold frames from video stream
     VideoCapture real_time(0); // Capturing video from default webcam
 
@@ -21,7 +18,7 @@ int main(int argc, char** argv) {
     }
 
     namedWindow("Face Detection"); // Window to show the result
-    string trained_classifier_location = "haarcascade_frontalface_alt.xml"; // XML Trained Classifier location
+    string trained_classifier_location = "C:/opencv/sources/data/haarcascades/haarcascade_frontalface_alt.xml"; // XML Trained Classifier location
     CascadeClassifier faceDetector;
 
     if (!faceDetector.load(trained_classifier_location)) { // Loading the XML trained classifier
