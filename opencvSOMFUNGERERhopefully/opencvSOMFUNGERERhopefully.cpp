@@ -25,39 +25,73 @@ int main() {
         return -1;
     }
 
-    // Known width of a face in cm (adjust based on your use case)
+    // Avg width of a face in cm 
     const float knownWidth = 14;
 
-    // Focal length of the camera (can be calibrated using a reference object)
+    // Focal length of the camera in cm
     const float focalLength = 600;
 
     Mat frame, gray;
     vector<Rect> faces;
+    Rect lastFace;
+    int frameCounter = 0;
 
     while (cap.read(frame)) {
         cvtColor(frame, gray, COLOR_BGR2GRAY);
         equalizeHist(gray, gray);
 
-        // Detect faces
-        faceCascade.detectMultiScale(gray, faces, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+        // Reduce frame size for faster processing
+        Mat smallGray;
+        float scale = 0.5;
+        resize(gray, smallGray, Size(), scale, scale);
 
+        // Detect faces every nth frame or if no face was detected in the last frame
+        if (frameCounter % 5 == 0 || lastFace.area() == 0) {
+            faceCascade.detectMultiScale(smallGray, faces, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+            if (!faces.empty()) {
+                lastFace = faces[0];
+            }
+        }
+        else {
+            // Search in the vicinity of the last detected face
+            Rect searchRegion = lastFace + Size(lastFace.width / 2, lastFace.height / 2);
+            searchRegion -= Point(searchRegion.width / 4, searchRegion.height / 4);
+            searchRegion &= Rect(0, 0, smallGray.cols, smallGray.rows); // Ensure ROI is within image bounds
+
+            Mat roiGray = smallGray(searchRegion);
+            faceCascade.detectMultiScale(roiGray, faces, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+
+            // Adjust face positions based on the search region
+            for (auto& face : faces) {
+                face += Point(searchRegion.x, searchRegion.y);
+                lastFace = face;
+            }
+        }
+
+        // Draw rectangles around the faces and detect eyes
         for (const auto& face : faces) {
-            // Draw a rectangle around the face
-            rectangle(frame, face, Scalar(255, 0, 0), 2);
+            Rect scaledFace = face;
+            scaledFace.x /= scale;
+            scaledFace.y /= scale;
+            scaledFace.width /= scale;
+            scaledFace.height /= scale;
 
             // Calculate and display the distance to the face
-            float distance = calculateDistance(face.width, knownWidth, focalLength);
-            putText(frame, to_string(distance) + " cm", Point(face.x, face.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 0), 2);
+            float distance = calculateDistance(scaledFace.width, knownWidth, focalLength);
+            putText(frame, to_string(distance) + " cm", Point(scaledFace.x, scaledFace.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 0), 2);
+
+            // Draw a rectangle around the face
+            rectangle(frame, scaledFace, Scalar(255, 0, 0), 2);
 
             // Detect eyes within the face ROI
-            Mat faceROI = gray(face);
+            Mat faceROI = gray(scaledFace);
             vector<Rect> eyes;
             eyesCascade.detectMultiScale(faceROI, eyes, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
 
             for (const auto& eye : eyes) {
                 // Draw a rectangle around each eye
-                Point eyeCenter(face.x + eye.x + eye.width / 2, face.y + eye.y + eye.height / 2);
-                rectangle(frame, Point(face.x + eye.x, face.y + eye.y), Point(face.x + eye.x + eye.width, face.y + eye.y + eye.height), Scalar(0, 255, 0), 2);
+                Point eyeCenter(scaledFace.x + eye.x + eye.width / 2, scaledFace.y + eye.y + eye.height / 2);
+                rectangle(frame, Point(scaledFace.x + eye.x, scaledFace.y + eye.y), Point(scaledFace.x + eye.x + eye.width, scaledFace.y + eye.y + eye.height), Scalar(0, 255, 0), 2);
             }
         }
 
@@ -66,8 +100,9 @@ int main() {
         if (waitKey(10) == 27) {
             break; // Exit if ESC is pressed
         }
+
+        frameCounter++;
     }
 
     return 0;
 }
-
