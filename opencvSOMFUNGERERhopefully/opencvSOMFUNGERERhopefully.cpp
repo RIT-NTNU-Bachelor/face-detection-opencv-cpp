@@ -19,7 +19,7 @@ int main() {
 
     // Load the cascades
     CascadeClassifier faceCascade("../x64/Debug/haarcascade_frontalface_alt.xml");
-    CascadeClassifier eyesCascade("../x64/Debug/haarcascade_eye_tree_eyeglasses.xml");
+    CascadeClassifier eyesCascade("../x64/Debug/haarcascade_eye.xml"); // Try a different eye cascade
 
     if (faceCascade.empty() || eyesCascade.empty()) {
         cerr << "ERROR: Could not load cascades." << endl;
@@ -48,7 +48,7 @@ int main() {
 
         // Detect faces every nth frame or if no face was detected in the last frame
         if (frameCounter % 5 == 0 || lastFace.area() == 0) {
-            faceCascade.detectMultiScale(smallGray, faces, 1.05, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+            faceCascade.detectMultiScale(smallGray, faces, 1.1, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
             if (!faces.empty()) {
                 lastFace = faces[0];
             }
@@ -60,7 +60,7 @@ int main() {
             searchRegion &= Rect(0, 0, smallGray.cols, smallGray.rows); // Ensure ROI is within image bounds
 
             Mat roiGray = smallGray(searchRegion);
-            faceCascade.detectMultiScale(roiGray, faces, 1.05, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+            faceCascade.detectMultiScale(roiGray, faces, 1.1, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
 
             // Adjust face positions based on the search region
             for (auto& face : faces) {
@@ -84,10 +84,12 @@ int main() {
             // Draw a rectangle around the face
             rectangle(frame, scaledFace, Scalar(255, 0, 0), 2);
 
-            // Detect eyes within the face ROI
+            // Limit the search area for eyes to the upper half of the face ROI
             Mat faceROI = gray(scaledFace);
+            Rect eyeRegion(0, 0, scaledFace.width, scaledFace.height / 2);
+            Mat eyeROI = faceROI(eyeRegion);
             vector<Rect> eyes;
-            eyesCascade.detectMultiScale(faceROI, eyes, 1.05, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+            eyesCascade.detectMultiScale(eyeROI, eyes, 1.1, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
 
             for (const auto& eye : eyes) {
                 // Draw a rectangle around each eye
