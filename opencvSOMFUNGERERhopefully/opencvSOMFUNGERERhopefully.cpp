@@ -1,5 +1,4 @@
 #include<iostream>
-#include <filesystem>
 #include<opencv2/highgui/highgui.hpp>
 #include<opencv2/imgproc/imgproc.hpp>
 #include<opencv2/objdetect/objdetect.hpp>
@@ -36,16 +35,23 @@ int main(int argc, char** argv) {
             break;
         }
 
+        // Resize the frame for faster processing
+        Mat resizedFrame;
+        float scale = 0.5; 
+        resize(video_stream, resizedFrame, Size(), scale, scale);
+
         // Convert the frame to grayscale and equalize histogram for better detection
         Mat gray;
-        cvtColor(video_stream, gray, COLOR_BGR2GRAY);
+        cvtColor(resizedFrame, gray, COLOR_BGR2GRAY);
         equalizeHist(gray, gray);
 
-        faceDetector.detectMultiScale(gray, faces, 1.1, 4, CASCADE_SCALE_IMAGE, Size(30, 30)); // Detecting faces
+        // Detect faces with adjusted parameters
+        faceDetector.detectMultiScale(gray, faces, 1.1, 4, CASCADE_SCALE_IMAGE, Size(60, 60)); // Adjust the minimum size if needed
 
-        // Drawing rectangles around the faces
+        // Draw rectangles around the faces
         for (int i = 0; i < faces.size(); i++) {
-            rectangle(video_stream, Point(faces[i].x, faces[i].y), Point(faces[i].x + faces[i].width, faces[i].y + faces[i].height), Scalar(255, 0, 255), 2, 8, 0);
+            Rect scaledFace(faces[i].x / scale, faces[i].y / scale, faces[i].width / scale, faces[i].height / scale);
+            rectangle(video_stream, scaledFace, Scalar(255, 0, 255), 2, 8, 0);
         }
 
         imshow("Face Detection", video_stream); // Display the frame with detected faces
