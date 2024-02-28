@@ -1,5 +1,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <cmath> // For std::round
 
 using namespace std;
 using namespace cv;
@@ -47,7 +48,7 @@ int main() {
 
         // Detect faces every nth frame or if no face was detected in the last frame
         if (frameCounter % 5 == 0 || lastFace.area() == 0) {
-            faceCascade.detectMultiScale(smallGray, faces, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+            faceCascade.detectMultiScale(smallGray, faces, 1.05, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
             if (!faces.empty()) {
                 lastFace = faces[0];
             }
@@ -59,7 +60,7 @@ int main() {
             searchRegion &= Rect(0, 0, smallGray.cols, smallGray.rows); // Ensure ROI is within image bounds
 
             Mat roiGray = smallGray(searchRegion);
-            faceCascade.detectMultiScale(roiGray, faces, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+            faceCascade.detectMultiScale(roiGray, faces, 1.05, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
 
             // Adjust face positions based on the search region
             for (auto& face : faces) {
@@ -78,7 +79,7 @@ int main() {
 
             // Calculate and display the distance to the face
             float distance = calculateDistance(scaledFace.width, knownWidth, focalLength);
-            putText(frame, to_string(distance) + " cm", Point(scaledFace.x, scaledFace.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 0), 2);
+            putText(frame, to_string(std::round(distance)) + " cm", Point(scaledFace.x, scaledFace.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 0, 0), 2);
 
             // Draw a rectangle around the face
             rectangle(frame, scaledFace, Scalar(255, 0, 0), 2);
@@ -86,7 +87,7 @@ int main() {
             // Detect eyes within the face ROI
             Mat faceROI = gray(scaledFace);
             vector<Rect> eyes;
-            eyesCascade.detectMultiScale(faceROI, eyes, 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
+            eyesCascade.detectMultiScale(faceROI, eyes, 1.05, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
 
             for (const auto& eye : eyes) {
                 // Draw a rectangle around each eye
