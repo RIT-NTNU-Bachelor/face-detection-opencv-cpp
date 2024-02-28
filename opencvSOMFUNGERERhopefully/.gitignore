@@ -1,6 +1,8 @@
 # Visual Studio
 *.vs/
 *.vscode/
+*Debug/
+*x64/
 
 # Prerequisites
 *.d
