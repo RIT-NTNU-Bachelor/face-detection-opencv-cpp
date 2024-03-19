@@ -2,7 +2,7 @@
 *.vs/
 *.vscode/
 *Debug/
-*x64/
+#*x64/
 
 # Prerequisites
 *.d
