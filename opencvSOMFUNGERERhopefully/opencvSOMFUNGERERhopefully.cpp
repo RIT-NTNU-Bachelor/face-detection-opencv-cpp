@@ -11,11 +11,20 @@ float calculateDistance(int faceWidth, int knownWidth, float focalLength) {
 }
 
 int main() {
-    VideoCapture cap(0);
-    if (!cap.isOpened()) {
-        cerr << "ERROR: Could not open camera." << endl;
-        return -1;
-    }
+       // Change the path to the location of your video file
+       string videoFilePath = "../x64/Debug/classroom_30FPS.mp4";
+       VideoCapture cap(videoFilePath);
+
+       if (!cap.isOpened()) {
+           cerr << "ERROR: Could not open video file." << endl;
+           return -1;
+       }
+
+       //VideoCapture cap(0);
+//  if (!cap.isOpened()) {
+  //      #      cerr << "ERROR: Could not open camera." << endl;
+    //    #      return -1;
+//#}
 
     // Load the cascades
     CascadeClassifier faceCascade("../x64/Debug/haarcascade_frontalface_alt.xml");
