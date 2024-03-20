@@ -24,6 +24,8 @@ const string caffeWeightFile = "../x64/Debug/res10_300x300_ssd_iter_140000_fp16.
 const string tensorflowConfigFile = "../x64/Debug/opencv_face_detector.pbtxt";
 const string tensorflowWeightFile = "../x64/Debug/opencv_face_detector_uint8.pb";
 
+string videoFilePath = "../x64/Debug/classroom_30FPS.mp4";
+
 void detectFaceOpenCVDNN(Net net, Mat& frameOpenCVDNN, string framework) {
     if (frameOpenCVDNN.empty()) {
         throw std::runtime_error("Empty frame received for DNN processing.");
