@@ -11,16 +11,16 @@ float calculateDistance(int faceWidth, int knownWidth, float focalLength) {
 }
 
 int main() {
-       // Change the path to the location of your video file
-       string videoFilePath = "../x64/Debug/classroom_30FPS.mp4";
-       VideoCapture cap(videoFilePath);
+    // Change the path to the location of your video file
+    string videoFilePath = "../x64/Debug/classroom_30FPS.mp4";
+    VideoCapture cap(videoFilePath);
 
-       if (!cap.isOpened()) {
-           cerr << "ERROR: Could not open video file." << endl;
-           return -1;
-       }
+    if (!cap.isOpened()) {
+        cerr << "ERROR: Could not open video file." << endl;
+        return -1;
+    }
 
-       //VideoCapture cap(0);
+    //VideoCapture cap(0);
 //  if (!cap.isOpened()) {
   //      #      cerr << "ERROR: Could not open camera." << endl;
     //    #      return -1;
