@@ -18,13 +18,11 @@ const double inScaleFactor = 1.0;
 const float confidenceThreshold = 0.7;
 const Scalar meanVal(104.0, 177.0, 123.0);
 
-const string caffeConfigFile = "../x64/Debug/deploy.prototxt";
-const string caffeWeightFile = "../x64/Debug/res10_300x300_ssd_iter_140000_fp16.caffemodel";
+const string caffeConfigFile = "../models/deploy.prototxt";
+const string caffeWeightFile = "../models/res10_300x300_ssd_iter_140000_fp16.caffemodel";
 
-const string tensorflowConfigFile = "../x64/Debug/opencv_face_detector.pbtxt";
-const string tensorflowWeightFile = "../x64/Debug/opencv_face_detector_uint8.pb";
-
-string videoFilePath = "../x64/Debug/classroom_30FPS.mp4";
+const string tensorflowConfigFile = "../models/opencv_face_detector.pbtxt";
+const string tensorflowWeightFile = "../models/opencv_face_detector_uint8.pb";
 
 void detectFaceOpenCVDNN(Net net, Mat& frameOpenCVDNN, string framework) {
     if (frameOpenCVDNN.empty()) {
