@@ -258,55 +258,86 @@ int main(int argc, const char** argv)
 
     namedWindow("Face Detection Comparison", WINDOW_NORMAL);
 
+    int frame_count = 0;
+    double tt_opencvHaar = 0;
+    double tt_opencvDNN = 0;
+    double tt_dlibHog = 0;
+    double tt_dlibMmod = 0;
+
     while (true)
     {
         source >> frame;
         if (frame.empty())
             break;
 
-        // Resize the frame to reduce computation
-        resize(frame, smallFrame, Size(), scale, scale);
+        resize(frame, smallFrame, Size(), scale, scale); // Reduce the frame size for faster processing
+        frame_count++;
 
-        // Update these variables only if detections are made
-        double fpsOpencvHaar, fpsOpencvDNN, fpsDlibHog, fpsDlibMmod;
-        Mat frameOpenCVHaar, frameOpenCVDNN, frameDlibHog, frameDlibMmod;
+        double t = cv::getTickCount();
 
-        // OpenCV Haar detection
-        frameOpenCVHaar = smallFrame.clone();
+        // Haar Cascade Detection
+        Mat frameOpenCVHaar = smallFrame.clone();
         detectFaceOpenCVHaar(faceCascade, frameOpenCVHaar);
+        tt_opencvHaar += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
 
-        // OpenCV DNN detection
-        frameOpenCVDNN = smallFrame.clone();
+        // DNN Detection
+        t = cv::getTickCount();
+        Mat frameOpenCVDNN = smallFrame.clone();
         detectFaceOpenCVDNN(net, frameOpenCVDNN, framework);
+        tt_opencvDNN += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
 
-        // Dlib HoG detection
-        frameDlibHog = smallFrame.clone();
+        // Dlib HoG Detection
+        t = cv::getTickCount();
+        Mat frameDlibHog = smallFrame.clone();
         detectFaceDlibHog(hogFaceDetector, frameDlibHog);
+        tt_dlibHog += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
 
-        // Dlib MMOD detection
-        frameDlibMmod = smallFrame.clone();
+        // Dlib MMOD Detection
+        t = cv::getTickCount();
+        Mat frameDlibMmod = smallFrame.clone();
         detectFaceDlibMMOD(mmodFaceDetector, frameDlibMmod);
+        tt_dlibMmod += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
 
-        // Resize back to original size for display purposes
-        resize(frameOpenCVHaar, frameOpenCVHaar, Size(), 1 / scale, 1 / scale);
-        resize(frameOpenCVDNN, frameOpenCVDNN, Size(), 1 / scale, 1 / scale);
-        resize(frameDlibHog, frameDlibHog, Size(), 1 / scale, 1 / scale);
-        resize(frameDlibMmod, frameDlibMmod, Size(), 1 / scale, 1 / scale);
+        // Calculate FPS for each method
+        double fpsOpencvHaar = frame_count / tt_opencvHaar;
+        double fpsOpencvDNN = frame_count / tt_opencvDNN;
+        double fpsDlibHog = frame_count / tt_dlibHog;
+        double fpsDlibMmod = frame_count / tt_dlibMmod;
 
-        // Combine the results into one Mat for display
+        // Resize back for display
+        resize(frameOpenCVHaar, frameOpenCVHaar, frame.size());
+        resize(frameOpenCVDNN, frameOpenCVDNN, frame.size());
+        resize(frameDlibHog, frameDlibHog, frame.size());
+        resize(frameDlibMmod, frameDlibMmod, frame.size());
+
+        // Construct FPS text using string streams
+        std::stringstream ssHaar, ssDNN, ssHog, ssMmod;
+        ssHaar << "OpenCV HAAR; FPS = " << std::fixed << std::setprecision(2) << fpsOpencvHaar;
+        ssDNN << "OpenCV DNN " << device << "; FPS = " << std::fixed << std::setprecision(2) << fpsOpencvDNN;
+        ssHog << "Dlib HoG; FPS = " << std::fixed << std::setprecision(2) << fpsDlibHog;
+        ssMmod << "Dlib MMOD; FPS = " << std::fixed << std::setprecision(2) << fpsDlibMmod;
+
+        // Put FPS text on the frames
+        putText(frameOpenCVHaar, ssHaar.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+        putText(frameOpenCVDNN, ssDNN.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+        putText(frameDlibHog, ssHog.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+        putText(frameDlibMmod, ssMmod.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+
+        // Combine the frames for display
         Mat top, bottom, combined;
         hconcat(frameOpenCVHaar, frameOpenCVDNN, top);
         hconcat(frameDlibHog, frameDlibMmod, bottom);
         vconcat(top, bottom, combined);
 
-        cv::resize(combined, combined, Size(), .5, .5);
         imshow("Face Detection Comparison", combined);
 
         int k = waitKey(5);
-        if (k == 27)
+        if (k == 27) // 27 is the ESC key
         {
-            destroyAllWindows();
-            break;
+            break; // Exit if ESC is pressed
         }
     }
+
+    destroyAllWindows();
+    return 0;
 }
