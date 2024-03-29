@@ -179,7 +179,7 @@ int main(int argc, const char** argv)
 
     if (!faceCascade.load(faceCascadePath))
     {
-        printf("--(!)Error loading face cascade\n");
+        cout << "--(!)Error loading face cascade\n";
         return -1;
     }
 
@@ -230,13 +230,11 @@ int main(int argc, const char** argv)
         cout << "Video file - " << videoFileName << endl;
 
     Net net;
-
     if (framework == "caffe")
         net = cv::dnn::readNetFromCaffe(caffeConfigFile, caffeWeightFile);
     else
         net = cv::dnn::readNetFromTensorflow(tensorflowWeightFile, tensorflowConfigFile);
 
-#if (CV_MAJOR_VERSION >= 4)
     if (device == "CPU")
     {
         net.setPreferableBackend(DNN_TARGET_CPU);
@@ -248,12 +246,6 @@ int main(int argc, const char** argv)
         net.setPreferableTarget(DNN_TARGET_CUDA);
         cout << "Device - " << device << endl;
     }
-#elif(CV_MAJOR_VERSION == 3)
-    // OpenCV 3.4.x does not support GPU backend
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    device = "cpu";
-    cout << "Device - " << device << endl;
-#endif
 
     cv::VideoCapture source;
     if (videoFileName != "")
@@ -261,52 +253,47 @@ int main(int argc, const char** argv)
     else
         source.open(0);
 
-    Mat frame;
-
-    int frame_count = 0;
-    double tt_opencvHaar = 0;
-    double tt_opencvDNN = 0;
-    double tt_dlibHog = 0;
-    double tt_dlibMmod = 0;
+    Mat frame, smallFrame;
+    double scale = 0.5; // Downscale the frame to reduce computation
 
     namedWindow("Face Detection Comparison", WINDOW_NORMAL);
-    double t = 0;
+
     while (true)
     {
         source >> frame;
         if (frame.empty())
             break;
 
-        frame_count++;
+        // Resize the frame to reduce computation
+        resize(frame, smallFrame, Size(), scale, scale);
 
-        t = cv::getTickCount();
-        Mat frameOpenCVHaar = frame.clone();
+        // Update these variables only if detections are made
+        double fpsOpencvHaar, fpsOpencvDNN, fpsDlibHog, fpsDlibMmod;
+        Mat frameOpenCVHaar, frameOpenCVDNN, frameDlibHog, frameDlibMmod;
+
+        // OpenCV Haar detection
+        frameOpenCVHaar = smallFrame.clone();
         detectFaceOpenCVHaar(faceCascade, frameOpenCVHaar);
-        tt_opencvHaar += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsOpencvHaar = frame_count / tt_opencvHaar;
-        putText(frameOpenCVHaar, cv::format("OpenCV HAAR; FPS = %.2f", fpsOpencvHaar), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
 
-        Mat frameOpenCVDNN = frame.clone();
-        t = cv::getTickCount();
+        // OpenCV DNN detection
+        frameOpenCVDNN = smallFrame.clone();
         detectFaceOpenCVDNN(net, frameOpenCVDNN, framework);
-        tt_opencvDNN += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsOpencvDNN = frame_count / tt_opencvDNN;
-        putText(frameOpenCVDNN, cv::format("OpenCV DNN %s FPS = %.2f", device.c_str(), fpsOpencvDNN), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
 
-        t = cv::getTickCount();
-        Mat frameDlibHog = frame.clone();
+        // Dlib HoG detection
+        frameDlibHog = smallFrame.clone();
         detectFaceDlibHog(hogFaceDetector, frameDlibHog);
-        tt_dlibHog += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsDlibHog = frame_count / tt_dlibHog;
-        putText(frameDlibHog, cv::format("DLIB HoG; FPS = %.2f", fpsDlibHog), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
 
-        t = cv::getTickCount();
-        Mat frameDlibMmod = frame.clone();
+        // Dlib MMOD detection
+        frameDlibMmod = smallFrame.clone();
         detectFaceDlibMMOD(mmodFaceDetector, frameDlibMmod);
-        tt_dlibMmod += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsDlibMmod = frame_count / tt_dlibMmod;
-        putText(frameDlibMmod, cv::format("DLIB MMOD; FPS = %.2f", fpsDlibMmod), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
 
+        // Resize back to original size for display purposes
+        resize(frameOpenCVHaar, frameOpenCVHaar, Size(), 1 / scale, 1 / scale);
+        resize(frameOpenCVDNN, frameOpenCVDNN, Size(), 1 / scale, 1 / scale);
+        resize(frameDlibHog, frameDlibHog, Size(), 1 / scale, 1 / scale);
+        resize(frameDlibMmod, frameDlibMmod, Size(), 1 / scale, 1 / scale);
+
+        // Combine the results into one Mat for display
         Mat top, bottom, combined;
         hconcat(frameOpenCVHaar, frameOpenCVDNN, top);
         hconcat(frameDlibHog, frameDlibMmod, bottom);
@@ -320,14 +307,6 @@ int main(int argc, const char** argv)
         {
             destroyAllWindows();
             break;
-        }
-
-        if (frame_count == 1)
-        {
-            tt_opencvHaar = 0;
-            tt_opencvDNN = 0;
-            tt_dlibHog = 0;
-            tt_dlibMmod = 0;
         }
     }
 }
