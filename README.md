@@ -1,4 +1,4 @@
-# Face Tracking using OpenCV in C++
+# Face Tracking using OpenCV and Dlib in C++
 This repository contains the C++ codebase for face detection through 4 different models using OpenCV and Dlib. 
 It is capable of processing images and video streams to identify and track human faces.
 
