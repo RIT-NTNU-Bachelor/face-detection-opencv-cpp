@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <numeric>
-#include <mgl2/mgl.h>
+
 using namespace cv;
 using namespace std;
 using namespace dlib;
@@ -66,13 +66,13 @@ int main() {
     cout << "Average time (in seconds) for HOG: " << hogAvg << endl;
 
     // Calculate FPS values
-    double haar_fps = 1 / haar_avg;
-    double dnn_fps = 1 / dnn_avg;
-    double hog_fps = 1 / hog_avg;
+    double haar_fps = 1 / haarAvg;
+    double dnn_fps = 1 / dnnAvg;
+    double hog_fps = 1 / hogAvg;
 
-    cout haar_fps << " FPS for Haar" << endl;
-    cout dnn_fps << " FPS for DNN" << endl;
-    cout hog_fps << " FPS for HoG" << endl;
+    cout << haar_fps << " FPS for Haar" << endl;
+    cout << dnn_fps << " FPS for DNN" << endl;
+    cout << hog_fps << " FPS for HoG" << endl;
 
     // Create MathGL graph and data
     mglGraph gr;
@@ -80,16 +80,16 @@ int main() {
     dat.a[0] = haar_fps;
     dat.a[1] = dnn_fps;
     dat.a[2] = hog_fps;
-
-    // Create the bar graph
-    gr.SubPlot(1, 1, 0);
-    gr.Title("Speed Comparison of Face Detection Methods");
-    gr.SetRanges(0, 3, 0, *std::max_element(dat.a, dat.a + 3) + 10);
-    gr.Axis();
-    gr.Bar(dat);
-    gr.Labels(dat, "Haar DNN HoG");
-    gr.Label('y', "Speed (FPS)", 0);
-gr.WriteFrame("../models/trained_models/bar_graph.png");
+   /
+   /// Create the bar graph
+  //gr.SubPlot(1, 1, 0);
+  //gr.Title("Speed Comparison of Face Detection Methods");
+  //gr.SetRanges(0, 3, 0, *std::max_element(dat.a, dat.a + 3) + 10);
+  //gr.Axis();
+  //gr.Bar(dat);
+  //gr.Labels(dat, "Haar DNN HoG");
+  //gr.Label('y', "Speed (FPS)", 0);
+  //gr.WriteFrame("../models/bar_graph.png");
 
     return 0;
 }

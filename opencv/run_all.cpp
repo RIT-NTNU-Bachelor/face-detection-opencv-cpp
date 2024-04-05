@@ -9,22 +9,17 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/videoio.hpp>
-
-#if(CV_MAJOR_VERSION >= 3)
-# include <opencv2/dnn.hpp>
+#include <opencv2/dnn.hpp>
 
 using namespace cv::dnn;
-#endif
 
-#if(CV_MAJOR_VERSION < 3)
-# include <dlib/opencv.h>
-# include <dlib/image_processing.h>
-# include <dlib/dnn.h>
-# include <dlib/data_io.h>
-# include <dlib/image_processing/frontal_face_detector.h>
+#include <C:/dlib-19.24/dlib/opencv.h>
+#include <C:/dlib-19.24/dlib/image_processing.h>
+#include <C:/dlib-19.24/dlib/dnn.h>
+#include <C:/dlib-19.24/dlib/data_io.h>
+#include <C:/dlib-19.24/dlib/image_processing/frontal_face_detector.h>
 
 using namespace dlib;
-#endif
 
 #include <boost/algorithm/string.hpp>
 
@@ -62,13 +57,11 @@ void detectFaceOpenCVHaar(CascadeClassifier faceCascade, Mat& frameOpenCVHaar, i
     }
 }
 
-#if(CV_MAJOR_VERSION >= 3)
 const size_t inWidth = 300;
 const size_t inHeight = 300;
 const double inScaleFactor = 1.0;
 const float confidenceThreshold = 0.7;
 const cv::Scalar meanVal(104.0, 177.0, 123.0);
-
 
 const std::string caffeConfigFile = "../models/deploy.prototxt";
 const std::string caffeWeightFile = "../models/res10_300x300_ssd_iter_140000_fp16.caffemodel";
@@ -106,9 +99,7 @@ void detectFaceOpenCVDNN(Net net, Mat& frameOpenCVDNN, string framework = "caffe
         }
     }
 }
-#endif
 
-#if(CV_MAJOR_VERSION < 3)
 void detectFaceDlibHog(frontal_face_detector hogFaceDetector, Mat& frameDlibHog, int inHeight = 300, int inWidth = 0)
 {
 
@@ -181,7 +172,6 @@ void detectFaceDlibMMOD(net_type mmodFaceDetector, Mat& frameDlibMmod, int inHei
         cv::rectangle(frameDlibMmod, Point(x1, y1), Point(x2, y2), Scalar(0, 255, 0), (int)(frameHeight / 150.0), 4);
     }
 }
-#endif
 
 int main(int argc, const char** argv)
 {
@@ -189,16 +179,14 @@ int main(int argc, const char** argv)
 
     if (!faceCascade.load(faceCascadePath))
     {
-        printf("--(!)Error loading face cascade\n");
+        cout << "--(!)Error loading face cascade\n";
         return -1;
     }
 
-#if(CV_MAJOR_VERSION < 3)
     frontal_face_detector hogFaceDetector = get_frontal_face_detector();
     String mmodModelPath = "../models/mmod_human_face_detector.dat";
     net_type mmodFaceDetector;
     deserialize(mmodModelPath) >> mmodFaceDetector;
-#endif
 
     string videoFileName;
     string device;
@@ -242,13 +230,11 @@ int main(int argc, const char** argv)
         cout << "Video file - " << videoFileName << endl;
 
     Net net;
-
     if (framework == "caffe")
         net = cv::dnn::readNetFromCaffe(caffeConfigFile, caffeWeightFile);
     else
         net = cv::dnn::readNetFromTensorflow(tensorflowWeightFile, tensorflowConfigFile);
 
-#if (CV_MAJOR_VERSION >= 4)
     if (device == "CPU")
     {
         net.setPreferableBackend(DNN_TARGET_CPU);
@@ -260,20 +246,17 @@ int main(int argc, const char** argv)
         net.setPreferableTarget(DNN_TARGET_CUDA);
         cout << "Device - " << device << endl;
     }
-#elif(CV_MAJOR_VERSION == 3)
-    // OpenCV 3.4.x does not support GPU backend
-    net.setPreferableBackend(DNN_BACKEND_DEFAULT);
-    device = "cpu";
-    cout << "Device - " << device << endl;
-#endif
 
     cv::VideoCapture source;
     if (videoFileName != "")
         source.open(videoFileName);
     else
-        source.open(0, CAP_V4L);
+        source.open(0);
 
-    Mat frame;
+    Mat frame, smallFrame;
+    double scale = 0.5; // Downscale the frame to reduce computation
+
+    namedWindow("Face Detection Comparison", WINDOW_NORMAL);
 
     int frame_count = 0;
     double tt_opencvHaar = 0;
@@ -281,75 +264,80 @@ int main(int argc, const char** argv)
     double tt_dlibHog = 0;
     double tt_dlibMmod = 0;
 
-    namedWindow("Face Detection Comparison", WINDOW_NORMAL);
-    double t = 0;
     while (true)
     {
         source >> frame;
         if (frame.empty())
             break;
 
+        resize(frame, smallFrame, Size(), scale, scale); // Reduce the frame size for faster processing
         frame_count++;
 
-        t = cv::getTickCount();
-        Mat frameOpenCVHaar = frame.clone();
+        double t = cv::getTickCount();
+
+        // Haar Cascade Detection
+        Mat frameOpenCVHaar = smallFrame.clone();
         detectFaceOpenCVHaar(faceCascade, frameOpenCVHaar);
         tt_opencvHaar += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsOpencvHaar = frame_count / tt_opencvHaar;
-        putText(frameOpenCVHaar, format("OpenCV HAAR; FPS = %.2f", fpsOpencvHaar), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
 
-        Mat frameOpenCVDNN = frame.clone();
-#if(CV_MAJOR_VERSION >= 3)
+        // DNN Detection
         t = cv::getTickCount();
+        Mat frameOpenCVDNN = smallFrame.clone();
         detectFaceOpenCVDNN(net, frameOpenCVDNN, framework);
         tt_opencvDNN += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsOpencvDNN = frame_count / tt_opencvDNN;
-        putText(frameOpenCVDNN, format("OpenCV DNN %s FPS = %.2f", device.c_str(), fpsOpencvDNN), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
-#else
-        putText(frameOpenCVDNN, "OpenCV DNN NOT SUPPORTED", Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
-#endif
 
-#if(CV_MAJOR_VERSION < 3)
+        // Dlib HoG Detection
         t = cv::getTickCount();
-        Mat frameDlibHog = frame.clone();
+        Mat frameDlibHog = smallFrame.clone();
         detectFaceDlibHog(hogFaceDetector, frameDlibHog);
         tt_dlibHog += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsDlibHog = frame_count / tt_dlibHog;
-        putText(frameDlibHog, format("DLIB HoG; FPS = %.2f", fpsDlibHog), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
 
+        // Dlib MMOD Detection
         t = cv::getTickCount();
-        Mat frameDlibMmod = frame.clone();
+        Mat frameDlibMmod = smallFrame.clone();
         detectFaceDlibMMOD(mmodFaceDetector, frameDlibMmod);
         tt_dlibMmod += ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        double fpsDlibMmod = frame_count / tt_dlibMmod;
-        putText(frameDlibMmod, format("DLIB MMOD; FPS = %.2f", fpsDlibMmod), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
-#endif
 
+        // Calculate FPS for each method
+        double fpsOpencvHaar = frame_count / tt_opencvHaar;
+        double fpsOpencvDNN = frame_count / tt_opencvDNN;
+        double fpsDlibHog = frame_count / tt_dlibHog;
+        double fpsDlibMmod = frame_count / tt_dlibMmod;
+
+        // Resize back for display
+        resize(frameOpenCVHaar, frameOpenCVHaar, frame.size());
+        resize(frameOpenCVDNN, frameOpenCVDNN, frame.size());
+        resize(frameDlibHog, frameDlibHog, frame.size());
+        resize(frameDlibMmod, frameDlibMmod, frame.size());
+
+        // Construct FPS text using string streams
+        std::stringstream ssHaar, ssDNN, ssHog, ssMmod;
+        ssHaar << "OpenCV HAAR; FPS = " << std::fixed << std::setprecision(2) << fpsOpencvHaar;
+        ssDNN << "OpenCV DNN " << device << "; FPS = " << std::fixed << std::setprecision(2) << fpsOpencvDNN;
+        ssHog << "Dlib HoG; FPS = " << std::fixed << std::setprecision(2) << fpsDlibHog;
+        ssMmod << "Dlib MMOD; FPS = " << std::fixed << std::setprecision(2) << fpsDlibMmod;
+
+        // Put FPS text on the frames
+        putText(frameOpenCVHaar, ssHaar.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+        putText(frameOpenCVDNN, ssDNN.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+        putText(frameDlibHog, ssHog.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+        putText(frameDlibMmod, ssMmod.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
+
+        // Combine the frames for display
         Mat top, bottom, combined;
         hconcat(frameOpenCVHaar, frameOpenCVDNN, top);
-#if(CV_MAJOR_VERSION < 3)
         hconcat(frameDlibHog, frameDlibMmod, bottom);
         vconcat(top, bottom, combined);
-#else
-        combined = top;
-#endif
 
-        cv::resize(combined, combined, Size(), .5, .5);
         imshow("Face Detection Comparison", combined);
 
         int k = waitKey(5);
-        if (k == 27)
+        if (k == 27) // 27 is the ESC key
         {
-            destroyAllWindows();
-            break;
-        }
-
-        if (frame_count == 1)
-        {
-            tt_opencvHaar = 0;
-            tt_opencvDNN = 0;
-            tt_dlibHog = 0;
-            tt_dlibMmod = 0;
+            break; // Exit if ESC is pressed
         }
     }
+
+    destroyAllWindows();
+    return 0;
 }
