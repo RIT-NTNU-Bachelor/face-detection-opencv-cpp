@@ -26,9 +26,6 @@ using namespace dlib;
 using namespace cv;
 using namespace std;
 
-// This script is inspired by learnopencv's script located at:
-// https://github.com/spmallick/learnopencv/blob/master/FaceDetectionComparison/run-all.cpp
-
 /** Global variables */
 String faceCascadePath;
 CascadeClassifier faceCascade;
@@ -240,20 +237,14 @@ int main(int argc, const char** argv)
 
     if (device == "CPU")
     {
-        net.setPreferableBackend(DNN_BACKEND_OPENCV);
-        net.setPreferableTarget(DNN_TARGET_CPU);
-        cout << "Device - " << device << endl;
-    }
-    else if (device == "GPU")
-    {
-        net.setPreferableBackend(DNN_BACKEND_CUDA);
-        net.setPreferableTarget(DNN_TARGET_CUDA);
+        net.setPreferableBackend(DNN_TARGET_CPU);
         cout << "Device - " << device << endl;
     }
     else
     {
-        cout << "Invalid device type. Please choose 'CPU' or 'GPU'." << endl;
-        return -1;
+        net.setPreferableBackend(DNN_BACKEND_CUDA);
+        net.setPreferableTarget(DNN_TARGET_CUDA);
+        cout << "Device - " << device << endl;
     }
 
     cv::VideoCapture source;
@@ -321,10 +312,10 @@ int main(int argc, const char** argv)
 
         // Construct FPS text using string streams
         std::stringstream ssHaar, ssDNN, ssHog, ssMmod;
-        ssHaar << "OpenCV Haar FPS: " << std::fixed << std::setprecision(2) << fpsOpencvHaar;
-        ssDNN << "OpenCV DNN CPU FPS: " << std::fixed << std::setprecision(2) << fpsOpencvDNN;
-        ssHog << "Dlib HOG FPS: " << std::fixed << std::setprecision(2) << fpsDlibHog;
-        ssMmod << "Dlib MMOD CPU FPS: " << std::fixed << std::setprecision(2) << fpsDlibMmod;
+        ssHaar << "OpenCV HAAR; FPS = " << std::fixed << std::setprecision(2) << fpsOpencvHaar;
+        ssDNN << "OpenCV DNN " << device << "; FPS = " << std::fixed << std::setprecision(2) << fpsOpencvDNN;
+        ssHog << "Dlib HoG; FPS = " << std::fixed << std::setprecision(2) << fpsDlibHog;
+        ssMmod << "Dlib MMOD; FPS = " << std::fixed << std::setprecision(2) << fpsDlibMmod;
 
         // Put FPS text on the frames
         putText(frameOpenCVHaar, ssHaar.str(), Point(10, 50), FONT_HERSHEY_SIMPLEX, 1.3, Scalar(0, 0, 255), 4);
